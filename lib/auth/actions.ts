@@ -4,28 +4,20 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function login(formData: FormData) {
+export async function login(formData: FormData): Promise<{ error?: string; success?: boolean }> {
   const supabase = await createClient();
-
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { error } = await supabase.auth.signInWithPassword({
     email: formData.get("email") as string,
     password: formData.get("password") as string,
   });
-
-  if (error) {
-    return { error: "بريد إلكتروني أو كلمة مرور غير صحيحة" };
-  }
-
+  if (error) return { error: "بريد إلكتروني أو كلمة مرور غير صحيحة" };
   revalidatePath("/", "layout");
-  
-  // نجاح الدخول
   return { success: true };
 }
 
-export async function signup(formData: FormData) {
+export async function signup(formData: FormData): Promise<{ error?: string; success?: boolean; message?: string }> {
   const supabase = await createClient();
-
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: formData.get("email") as string,
     password: formData.get("password") as string,
     options: {
@@ -37,6 +29,9 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
+    if (error.message.includes("already registered")) {
+      return { error: "هذا البريد مسجل بالفعل. الرجاء تسجيل الدخول." };
+    }
     return { error: error.message };
   }
 
