@@ -36,11 +36,11 @@ export interface PatientSatisfactionData {
 }
 
 export interface TomorrowEvent {
-  id: string;
-  doctorName?: string;
+  id?: string;
   type: string;
   time: string;
   patientsCount: number;
+  doctorName?: string;
 }
 
 // ============ بيانات المرضى ============
