@@ -3,6 +3,12 @@ import { getTranslations } from "next-intl/server";
 import MainLayout from "@/components/layout/MainLayout";
 import AnalyticsClient from "@/components/analytics/AnalyticsClient";
 import LoadingSkeleton from "@/components/analytics/LoadingSkeleton";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "التحليلات",
+  description: "تحليلات وإحصائيات العيادة - الإيرادات، المواعيد، والعلاجات الأكثر شيوعاً.",
+};
 
 export default function AnalyticsPage() {
   return (

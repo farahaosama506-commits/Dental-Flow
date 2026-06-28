@@ -121,49 +121,66 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
   const [
+    // 1. مرضى اليوم - من جدول المواعيد (appointments)
     { count: todayPatientsCount },
     { count: yesterdayPatientsCount },
-    { data: todayRevenueData },
-    { data: yesterdayRevenueData },
-    { count: totalPatients },
-    { count: completedAppointments },
-    { count: totalAppointments },
+    
+    // 2. الإيرادات - من جدول المرضى (patients.estimated_cost)
+    { data: allPatientsRevenue },
+    
+    // 3. نسبة الإلغاء - من جدول المواعيد (appointments.status = cancelled)
+    { count: cancelledCount },
+    { count: totalAppointmentsCount },
+    
+    // 4. مواعيد اليوم للعرض
     { data: todayAppointmentsData },
+    
+    // 5. مواعيد الغد
     { data: tomorrowAppointmentsData },
   ] = await Promise.all([
+    // مرضى اليوم
     supabase.from("appointments").select("*", { count: "exact", head: true }).eq("doctor_id", doctorId).eq("appointment_date", todayStr),
+    // مرضى الأمس
     supabase.from("appointments").select("*", { count: "exact", head: true }).eq("doctor_id", doctorId).eq("appointment_date", yesterdayStr),
-    supabase.from("patients").select("estimated_cost").eq("doctor_id", doctorId).gte("created_at", `${todayStr}T00:00:00`).lte("created_at", `${todayStr}T23:59:59`),
-    supabase.from("patients").select("estimated_cost").eq("doctor_id", doctorId).gte("created_at", `${yesterdayStr}T00:00:00`).lte("created_at", `${yesterdayStr}T23:59:59`),
-    supabase.from("patients").select("*", { count: "exact", head: true }).eq("doctor_id", doctorId),
-    supabase.from("appointments").select("*", { count: "exact", head: true }).eq("doctor_id", doctorId).eq("status", "completed"),
+    
+    // جميع إيرادات المرضى
+    supabase.from("patients").select("estimated_cost").eq("doctor_id", doctorId),
+    
+    // المواعيد الملغية
+    supabase.from("appointments").select("*", { count: "exact", head: true }).eq("doctor_id", doctorId).eq("status", "cancelled"),
+    // إجمالي المواعيد
     supabase.from("appointments").select("*", { count: "exact", head: true }).eq("doctor_id", doctorId),
-    supabase.from("appointments").select("appointment_time, patient:patients(full_name), treatment:treatments(name), status").eq("doctor_id", doctorId).eq("appointment_date", todayStr).order("appointment_time"),
+    
+    // مواعيد اليوم
+    supabase.from("appointments").select("id, appointment_time, patient:patients(full_name), treatment:treatments(name), status").eq("doctor_id", doctorId).eq("appointment_date", todayStr).order("appointment_time"),
+    
+    // مواعيد الغد
     supabase.from("appointments").select("appointment_time").eq("doctor_id", doctorId).eq("appointment_date", tomorrowStr).order("appointment_time"),
   ]);
 
-  const todayRevenue = (todayRevenueData || []).reduce((sum, p) => sum + (p.estimated_cost || 0), 0);
-  const yesterdayRevenue = (yesterdayRevenueData || []).reduce((sum, p) => sum + (p.estimated_cost || 0), 0);
+  // ====== الإيرادات ======
+  const totalRevenue = (allPatientsRevenue || []).reduce((sum, p) => sum + (p.estimated_cost || 0), 0);
 
+  // ====== نسبة الإلغاء ======
+  const cancellationRate = totalAppointmentsCount
+    ? Math.round(((cancelledCount || 0) / totalAppointmentsCount) * 100)
+    : 0;
+
+  // ====== نسبة تغيير المرضى ======
   const patientsChangePercent = yesterdayPatientsCount
     ? Math.round(((todayPatientsCount! - yesterdayPatientsCount!) / yesterdayPatientsCount!) * 100)
-    : 0;
-  
-  const revenueChangePercent = yesterdayRevenue
-    ? Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100)
-    : 0;
+    : todayPatientsCount ? 100 : 0;
 
-  const completionRate = totalAppointments
-    ? Math.round(((completedAppointments || 0) / totalAppointments) * 100)
-    : 0;
-
-  const todayAppointments = (todayAppointmentsData || []).map((apt: any) => ({
+  // ====== مواعيد اليوم ======
+  const todayAppointments = (todayAppointmentsData || []).map((apt: any, index: number) => ({
+    id: apt.id || `today-${index}`,
     time: apt.appointment_time?.substring(0, 5) || "",
     patientName: apt.patient?.full_name || "غير معروف",
     treatment: apt.treatment?.name || "غير محدد",
     status: apt.status || "scheduled",
   }));
 
+  // ====== مواعيد الغد ======
   const tomorrowAppts = tomorrowAppointmentsData || [];
   const morningAppts = tomorrowAppts.filter((apt: any) => {
     const hour = parseInt(apt.appointment_time?.split(":")[0] || "0");
@@ -177,6 +194,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const tomorrowEvents: TomorrowEvent[] = [];
   if (morningAppts.length > 0) {
     tomorrowEvents.push({
+      id: "morning",
       type: "الفترة الصباحية",
       time: `${morningAppts[0].appointment_time?.substring(0, 5)} - ${morningAppts[morningAppts.length - 1].appointment_time?.substring(0, 5)}`,
       patientsCount: morningAppts.length,
@@ -185,6 +203,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   }
   if (afternoonAppts.length > 0) {
     tomorrowEvents.push({
+      id: "afternoon",
       type: "الفترة المسائية",
       time: `${afternoonAppts[0].appointment_time?.substring(0, 5)} - ${afternoonAppts[afternoonAppts.length - 1].appointment_time?.substring(0, 5)}`,
       patientsCount: afternoonAppts.length,
@@ -196,11 +215,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     todayPatients: todayPatientsCount || 0,
     yesterdayPatients: yesterdayPatientsCount || 0,
     patientsChangePercent,
-    todayRevenue,
-    yesterdayRevenue,
-    revenueChangePercent,
-    totalPatients: totalPatients || 0,
-    completionRate,
+    todayRevenue: totalRevenue,
+    yesterdayRevenue: 0,
+    revenueChangePercent: 0,
+    totalPatients: todayPatientsCount || 0,
+    completionRate: cancellationRate,
     todayAppointments,
     tomorrowEvents,
   };

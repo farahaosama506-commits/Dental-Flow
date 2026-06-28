@@ -1,7 +1,13 @@
 import { getTranslations } from "next-intl/server";
 import SignupForm from "@/components/auth/SignupForm";
 import Link from "next/link";
+import type { Metadata } from "next";
 
+export const metadata: Metadata = {
+  title: "إنشاء حساب",
+  description: "إنشاء حساب جديد في DentalFlow للأطباء.",
+  robots: { index: false, follow: false },
+};
 export default async function SignupPage() {
   const t = await getTranslations("auth");
 

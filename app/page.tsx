@@ -6,9 +6,14 @@ import TomorrowPreview from "@/components/dashboard/TomorrowPreview";
 import { getDashboardStats } from "@/lib/db/analytics";
 import { createClient } from "@/lib/supabase/server";
 import type { TomorrowEvent } from "@/types";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "لوحة التحكم",
+  description: "لوحة تحكم DentalFlow - إحصائيات، مواعيد اليوم، والمرضى.",
+};
 
 export default async function DashboardPage() {
-  // جلب اسم المستخدم من Supabase
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
   const doctorName = userData.user?.user_metadata?.full_name || "دكتور";
@@ -25,17 +30,20 @@ export default async function DashboardPage() {
     const data = await getDashboardStats();
 
     stats = {
+      // بطاقة 1: مرضى اليوم
       todaysPatients: {
         count: data.todayPatients,
         change: data.patientsChangePercent,
       },
+      // بطاقة 2: إجمالي الإيرادات
       totalRevenue: {
         amount: data.todayRevenue,
-        change: data.revenueChangePercent,
+        change: data.todayPatients,
       },
+      // بطاقة 3: نسبة الإلغاء
       cancellationRate: {
         rate: data.completionRate,
-        change: data.totalPatients,
+        change: data.yesterdayPatients,
       },
     };
 

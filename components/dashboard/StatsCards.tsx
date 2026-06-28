@@ -23,38 +23,39 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats }) => {
 
   const cards = [
     {
-      title: t("todaysPatients"),
+      title: "مرضى اليوم",
       value: formatNumber(stats.todaysPatients.count),
       change: stats.todaysPatients.change,
-      changeText: stats.todaysPatients.change >= 0
-        ? `↑ ${stats.todaysPatients.change}% مقابل الأمس`
-        : `↓ ${Math.abs(stats.todaysPatients.change)}% مقابل الأمس`,
+      changeText:
+        stats.todaysPatients.change >= 0
+          ? `↑ ${stats.todaysPatients.change}% مقابل الأمس`
+          : `↓ ${Math.abs(stats.todaysPatients.change)}% مقابل الأمس`,
       icon: "fa-users",
       iconBg: "bg-teal-light",
       iconColor: "text-teal",
       isPositive: stats.todaysPatients.change >= 0,
     },
     {
-      title: t("totalRevenue"),
-      value: mounted ? `$${stats.totalRevenue.amount.toLocaleString("ar-SA")}` : `$${stats.totalRevenue.amount}`,
+      title: "إجمالي الإيرادات",
+      value: mounted
+        ? `$${stats.totalRevenue.amount.toLocaleString("ar-SA")}`
+        : `$${stats.totalRevenue.amount}`,
       change: stats.totalRevenue.change,
-      changeText: stats.totalRevenue.change >= 0
-        ? `↑ ${stats.totalRevenue.change}%`
-        : `↓ ${Math.abs(stats.totalRevenue.change)}%`,
+      changeText: `${formatNumber(stats.totalRevenue.change)} مريض مسجل`,
       icon: "fa-dollar-sign",
       iconBg: "bg-green-light",
       iconColor: "text-green-soft",
-      isPositive: stats.totalRevenue.change >= 0,
+      isPositive: true,
     },
     {
-      title: t("cancellationRate"),
+      title: "نسبة الإلغاء",
       value: `${stats.cancellationRate.rate}%`,
       change: stats.cancellationRate.change,
-      changeText: `${formatNumber(stats.cancellationRate.change)} مريض`,
-      icon: "fa-chart-line",
-      iconBg: "bg-navy/10",
-      iconColor: "text-navy",
-      isPositive: true,
+      changeText: `${formatNumber(stats.cancellationRate.change)} مريض أمس`,
+      icon: "fa-ban",
+      iconBg: "bg-red-50",
+      iconColor: "text-accent-red",
+      isPositive: stats.cancellationRate.rate < 10,
     },
   ];
 

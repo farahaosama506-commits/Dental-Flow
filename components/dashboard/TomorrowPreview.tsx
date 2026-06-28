@@ -29,9 +29,9 @@ const TomorrowPreview: React.FC<TomorrowPreviewProps> = ({ events }) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {events.map((event) => (
+          {events.map((event, index) => (
             <div
-              key={event.id}
+              key={event.id || `event-${index}`}
               className="flex items-start gap-3 p-3 bg-gray-card rounded-xl"
             >
               <div className="w-9 h-9 rounded-lg bg-teal-light flex items-center justify-center shrink-0">
